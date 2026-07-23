@@ -139,7 +139,11 @@ function processSpreadsheetData(data) {
     rawData = data || [];
     parsedData = [];
 
-    if (!data || data.length === 0) return;
+    // Se os dados estiverem vazios/zerados, limpa e atualiza o painel imediatamente
+    if (!data || data.length === 0) {
+        updateDashboard();
+        return;
+    }
 
     // Identificar colunas corretas flexivelmente
     const sampleRow = data[0];
@@ -190,7 +194,22 @@ function processSpreadsheetData(data) {
 // ATUALIZAÇÃO GERAL DOS KPIS E GRÁFICOS
 function updateDashboard() {
     const total = parsedData.length;
-    if (total === 0) return;
+
+    // TRATAMENTO PARA DADOS ZERADOS
+    if (total === 0) {
+        document.getElementById('kpi-total').innerText = '0';
+        document.getElementById('kpi-contados').innerText = '0';
+        document.getElementById('kpi-contados-pct').innerText = '0.0% do total';
+        document.getElementById('kpi-pendentes').innerText = '0';
+        document.getElementById('kpi-pendentes-pct').innerText = '0.0% pendente';
+        document.getElementById('kpi-ocorrencias').innerText = '0';
+        document.getElementById('kpi-ocorrencias-pct').innerText = '0.0% com divergência';
+        document.getElementById('acuracia-valor').innerText = '0.0%';
+
+        renderCharts(0, 0, 0, 0, 0);
+        renderTable();
+        return;
+    }
 
     const contados = parsedData.filter(d => d.contado).length;
     const pendentes = total - contados;
@@ -230,8 +249,8 @@ function renderCharts(contados, pendentes, ocorrencias, total, semOcorrencia) {
     if (chartInstanceOcorrencias) chartInstanceOcorrencias.destroy();
     if (chartInstanceVisaoGeral) chartInstanceVisaoGeral.destroy();
 
-    const pctContado = ((contados / total) * 100).toFixed(1);
-    const pctPendente = ((pendentes / total) * 100).toFixed(1);
+    const pctContado = total > 0 ? ((contados / total) * 100).toFixed(1) : "0.0";
+    const pctPendente = total > 0 ? ((pendentes / total) * 100).toFixed(1) : "0.0";
 
     // 1. GRÁFICO DE PROGRESSO DA CONTAGEM (DONUT)
     const elProg = document.getElementById('chartProgresso');
@@ -257,7 +276,7 @@ function renderCharts(contados, pendentes, ocorrencias, total, semOcorrencia) {
                         callbacks: {
                             label: function(context) {
                                 const value = context.raw;
-                                const pct = ((value / total) * 100).toFixed(1);
+                                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                 return ` ${context.label}: ${value} localizadores (${pct}%)`;
                             }
                         }
@@ -285,8 +304,8 @@ function renderCharts(contados, pendentes, ocorrencias, total, semOcorrencia) {
 
     // 2. GRÁFICO DE OCORRÊNCIAS / DIVERGÊNCIAS (PIE)
     const semOcorrenciaTotal = total - ocorrencias;
-    const pctSemOcorrencia = ((semOcorrenciaTotal / total) * 100).toFixed(1);
-    const pctComOcorrencia = ((ocorrencias / total) * 100).toFixed(1);
+    const pctSemOcorrencia = total > 0 ? ((semOcorrenciaTotal / total) * 100).toFixed(1) : "0.0";
+    const pctComOcorrencia = total > 0 ? ((ocorrencias / total) * 100).toFixed(1) : "0.0";
 
     const elOcor = document.getElementById('chartOcorrencias');
     if (elOcor) {
@@ -311,7 +330,7 @@ function renderCharts(contados, pendentes, ocorrencias, total, semOcorrencia) {
                         callbacks: {
                             label: function(context) {
                                 const value = context.raw;
-                                const pct = ((value / total) * 100).toFixed(1);
+                                const pct = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
                                 return ` ${context.label}: ${value} localizadores (${pct}%)`;
                             }
                         }
