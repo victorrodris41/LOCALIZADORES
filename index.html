@@ -46,7 +46,7 @@
 
             <!-- Botões de Ação do Usuário -->
             <div class="flex items-center gap-3">
-                <div id="area-botoes-upload" class="flex items-center gap-3">
+                <div id="area-botoes-upload" class="flex flex-wrap items-center gap-3">
                     <label for="excel-upload" class="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 rounded-xl shadow transition duration-200 flex items-center gap-2 text-sm">
                         <i class="fa-solid fa-file-excel text-base"></i>
                         <span>Carregar Planilha (.xlsx)</span>
@@ -56,6 +56,12 @@
                     <button id="btn-load-demo" class="bg-indigo-800 hover:bg-indigo-700 text-indigo-100 font-medium px-4 py-2.5 rounded-xl shadow border border-indigo-700 transition duration-200 flex items-center gap-2 text-sm" title="Carregar dados de exemplo">
                         <i class="fa-solid fa-rotate-right"></i>
                         <span>Dados de Exemplo</span>
+                    </button>
+
+                    <!-- NOVO BOTÃO: ZERAR DADOS E GRÁFICOS -->
+                    <button onclick="zerarDadosBanco()" class="bg-rose-700 hover:bg-rose-600 text-white font-medium px-4 py-2.5 rounded-xl shadow border border-rose-800 transition duration-200 flex items-center gap-2 text-sm" title="Zerar todos os registros e gráficos">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Zerar Dados</span>
                     </button>
                 </div>
 
@@ -330,7 +336,35 @@
             }
         };
 
-        // 3. LISTEN EM TEMPO REAL (Carrega automático para todos os usuários)
+        // 3. FUNÇÃO PARA ZERAR/LIMPAR DADOS DO BANCO E GRÁFICOS
+        async function zerarDadosBanco() {
+            const confirmacao = confirm("Tem certeza de que deseja zerar todos os registros e gráficos do sistema? Esta ação não poderá ser desfeita.");
+            
+            if (!confirmacao) return;
+
+            try {
+                document.getElementById('current-filename').innerText = "Limpando dados...";
+                
+                // Atualiza o documento no Firebase para um estado vazio
+                await db.collection("inventario").doc("atual").set({
+                    nomeArquivo: "Nenhum arquivo carregado",
+                    dataAtualizacao: new Date().toLocaleString('pt-BR'),
+                    dados: []
+                });
+
+                // Se houver a função de processar/renderizar na tela, executa enviando array vazio
+                if (typeof window.processarDadosExcel === 'function') {
+                    window.processarDadosExcel([]);
+                }
+
+                alert("Todos os dados e gráficos foram zerados com sucesso!");
+            } catch (error) {
+                console.error("Erro ao zerar os dados:", error);
+                alert("Ocorreu um erro ao tentar zerar os dados. Tente novamente.");
+            }
+        }
+
+        // 4. LISTEN EM TEMPO REAL (Carrega automático para todos os usuários)
         db.collection("inventario").doc("atual").onSnapshot((doc) => {
             if (doc.exists) {
                 const info = doc.data();
@@ -338,15 +372,18 @@
                 document.getElementById('last-update').innerText = "Atualizado em: " + (info.dataAtualizacao || "Agora");
 
                 if (typeof window.processarDadosExcel === 'function') {
-                    window.processarDadosExcel(info.dados);
+                    window.processarDadosExcel(info.dados || []);
                 }
             } else {
                 document.getElementById('current-filename').innerText = "Nenhuma planilha salva no banco ainda.";
                 document.getElementById('last-update').innerText = "Aguardando envio...";
+                if (typeof window.processarDadosExcel === 'function') {
+                    window.processarDadosExcel([]);
+                }
             }
         });
 
-        // 4. LOGOUT E CONTROLE DE PERMISSÕES
+        // 5. LOGOUT E CONTROLE DE PERMISSÕES
         function fazerLogout() {
             localStorage.clear();
             window.location.replace('login.html');
