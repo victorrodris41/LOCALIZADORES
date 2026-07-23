@@ -3,310 +3,245 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard de Contagem de Localizadores - CD</title>
-
-    <!-- VERIFICAÇÃO DE LOGIN INSTANTÂNEA (Bloqueia a página se não estiver logado) -->
-    <script>
-        (function() {
-            const usuarioLogado = localStorage.getItem('userLogged');
-            if (!usuarioLogado) {
-                window.location.replace('login.html');
-            }
-        })();
-    </script>
-
-    <!-- Tailwind CSS -->
+    <title>Dashboard de Controle de Inventário</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js para Gráficos Interativos -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- SheetJS para leitura de arquivos Excel (.xlsx / .xls / .csv) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-    <!-- FontAwesome Ícones -->
+    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts Inter -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Estilos Customizados Externos -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX Parser) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
 
-    <!-- Header principal -->
-    <header class="bg-indigo-900 text-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap justify-between items-center gap-4">
+    <!-- HEADER DE NAVEGAÇÃO -->
+    <header class="bg-slate-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
             <div class="flex items-center space-x-3">
-                <div class="p-2.5 bg-indigo-700/80 rounded-xl shadow-inner text-indigo-200">
-                    <i class="fa-solid fa-boxes-stacked text-2xl"></i>
+                <div class="p-2 bg-indigo-600 rounded-lg text-white">
+                    <i class="fa-solid fa-boxes-stacked text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold tracking-tight">Inventário de Localizadores do CD</h1>
-                    <p class="text-xs text-indigo-200">Acompanhamento de Contagem e Ocorrências em Tempo Real</p>
+                    <h1 class="text-lg font-bold tracking-wide">Dashboard de Acuracidade</h1>
+                    <p class="text-xs text-slate-400">Controle Operacional de Inventário</p>
                 </div>
             </div>
 
-            <!-- Botões de Ação do Usuário -->
-            <div class="flex items-center gap-3">
-                <div id="area-botoes-upload" class="flex flex-wrap items-center gap-3">
-                    <label for="excel-upload" class="cursor-pointer bg-emerald-600 hover:bg-emerald-500 text-white font-medium px-4 py-2.5 rounded-xl shadow transition duration-200 flex items-center gap-2 text-sm">
-                        <i class="fa-solid fa-file-excel text-base"></i>
-                        <span>Carregar Planilha (.xlsx)</span>
-                    </label>
-                    <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" class="hidden">
-
-                    <button id="btn-load-demo" class="bg-indigo-800 hover:bg-indigo-700 text-indigo-100 font-medium px-4 py-2.5 rounded-xl shadow border border-indigo-700 transition duration-200 flex items-center gap-2 text-sm" title="Carregar dados de exemplo">
-                        <i class="fa-solid fa-rotate-right"></i>
-                        <span>Dados de Exemplo</span>
-                    </button>
-
-                    <!-- NOVO BOTÃO: ZERAR DADOS E GRÁFICOS -->
-                    <button onclick="zerarDadosBanco()" class="bg-rose-700 hover:bg-rose-600 text-white font-medium px-4 py-2.5 rounded-xl shadow border border-rose-800 transition duration-200 flex items-center gap-2 text-sm" title="Zerar todos os registros e gráficos">
-                        <i class="fa-solid fa-trash-can"></i>
-                        <span>Zerar Dados</span>
-                    </button>
+            <!-- INFORMAÇÕES DO ARQUIVO ATUAL E LOGOUT -->
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p id="current-filename" class="text-xs font-semibold text-indigo-300">Nenhum arquivo carregado</p>
+                    <p id="last-update" class="text-[10px] text-slate-400">Aguardando atualização...</p>
                 </div>
-
-                <!-- Botão de Sair (Logout) -->
-                <button onclick="fazerLogout()" class="bg-rose-600 hover:bg-rose-500 text-white font-medium px-3 py-2.5 rounded-xl shadow transition duration-200 flex items-center gap-2 text-sm" title="Sair do Sistema">
-                    <i class="fa-solid fa-right-from-bracket"></i>
-                    <span>Sair</span>
+                <button onclick="fazerLogout()" class="px-3 py-1.5 bg-rose-600/80 hover:bg-rose-600 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow">
+                    <i class="fa-solid fa-right-from-bracket"></i> Sair
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- Conteúdo Principal -->
-    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="max-w-7xl mx-auto px-4 py-6 space-y-6">
 
-        <!-- Status do Arquivo & Notificações -->
-        <div id="status-banner" class="glass-card rounded-2xl p-4 flex flex-wrap items-center justify-between border-l-4 border-indigo-600 shadow-sm gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
-                    <i class="fa-solid fa-file-lines"></i>
+        <!-- PAINEL DE CONTROLE DE ARQUIVOS (Apenas Admin) -->
+        <section id="area-botoes-upload" class="bg-white rounded-2xl p-4 sm:p-6 shadow-sm border border-slate-200">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel text-emerald-600"></i> Importar ou Gerenciar Dados
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-0.5">Suba a planilha do inventário em tempo real ou altere os dados sincronizados.</p>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Botão Fazer Upload -->
+                    <label for="excel-upload" class="cursor-pointer px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-upload"></i> Carregar Excel
+                    </label>
+                    <input type="file" id="excel-upload" accept=".xlsx, .xls, .csv" class="hidden">
+
+                    <!-- Botão Dados Demo -->
+                    <button id="btn-load-demo" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold rounded-xl shadow transition flex items-center gap-2">
+                        <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i> Carregar Demo
+                    </button>
+
+                    <!-- Botão Zerar Dados do Banco -->
+                    <button onclick="zerarDadosBanco()" class="px-4 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold rounded-xl transition flex items-center gap-2">
+                        <i class="fa-solid fa-trash-can"></i> Zerar Dados
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- CARDS DE INDICADORES (KPIS) -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <!-- Total Localizadores -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Total Posicionado</span>
+                    <i class="fa-solid fa-location-dot text-indigo-500"></i>
                 </div>
                 <div>
-                    <p class="text-xs font-semibold uppercase text-slate-400 tracking-wider">Planilha em Exibição</p>
-                    <h2 id="current-filename" class="text-sm font-bold text-slate-800">Conectando ao banco de dados...</h2>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-4 text-xs">
-                <div class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 font-semibold flex items-center gap-2">
-                    <i class="fa-solid fa-bullseye text-indigo-500"></i>
-                    <span>Total Planilha = 100% CD</span>
-                </div>
-                <div id="last-update" class="text-slate-500">
-                    Sincronizando...
-                </div>
-            </div>
-        </div>
-
-        <!-- Métricas KPI Rápidas -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <!-- Card 1: Total no CD -->
-            <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200/80 hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total de Localizadores</p>
-                        <h3 id="kpi-total" class="text-3xl font-extrabold text-slate-800 mt-2">0</h3>
-                    </div>
-                    <div class="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                        <i class="fa-solid fa-warehouse text-xl"></i>
-                    </div>
-                </div>
-                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center text-xs text-slate-500">
-                    <span class="font-bold text-blue-600 mr-1">100%</span> Capacidade total analisada
+                    <h3 id="kpi-total" class="text-2xl font-black text-slate-800">0</h3>
+                    <p class="text-[11px] text-slate-400 mt-1">Localizadores na base</p>
                 </div>
             </div>
 
-            <!-- Card 2: Total Contados (SIM) -->
-            <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200/80 hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Localizadores Contados</p>
-                        <h3 id="kpi-contados" class="text-3xl font-extrabold text-emerald-600 mt-2">0</h3>
-                    </div>
-                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
-                        <i class="fa-solid fa-circle-check text-xl"></i>
-                    </div>
+            <!-- Contados -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-emerald-600">Contados (SIM)</span>
+                    <i class="fa-solid fa-circle-check text-emerald-500"></i>
                 </div>
-                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span id="kpi-contados-pct" class="font-bold text-emerald-600 text-sm">0.0%</span>
-                    <span class="text-slate-400">marcado como "SIM"</span>
+                <div>
+                    <h3 id="kpi-contados" class="text-2xl font-black text-slate-800">0</h3>
+                    <p id="kpi-contados-pct" class="text-[11px] text-emerald-600 font-semibold mt-1">0.0% do total</p>
                 </div>
             </div>
 
-            <!-- Card 3: Pendentes de Contagem -->
-            <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200/80 hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Pendentes de Contagem</p>
-                        <h3 id="kpi-pendentes" class="text-3xl font-extrabold text-amber-600 mt-2">0</h3>
-                    </div>
-                    <div class="p-3 bg-amber-50 text-amber-600 rounded-xl">
-                        <i class="fa-solid fa-hourglass-half text-xl"></i>
-                    </div>
+            <!-- Pendentes -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-amber-600">Pendentes (NÃO)</span>
+                    <i class="fa-solid fa-clock text-amber-500"></i>
                 </div>
-                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span id="kpi-pendentes-pct" class="font-bold text-amber-600 text-sm">0.0%</span>
-                    <span class="text-slate-400">não contados</span>
+                <div>
+                    <h3 id="kpi-pendentes" class="text-2xl font-black text-slate-800">0</h3>
+                    <p id="kpi-pendentes-pct" class="text-[11px] text-amber-600 font-semibold mt-1">0.0% pendente</p>
                 </div>
             </div>
 
-            <!-- Card 4: Ocorrências / Divergências -->
-            <div class="glass-card rounded-2xl p-5 shadow-sm border border-slate-200/80 hover:shadow-md transition">
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Com Ocorrência</p>
-                        <h3 id="kpi-ocorrencias" class="text-3xl font-extrabold text-rose-600 mt-2">0</h3>
-                    </div>
-                    <div class="p-3 bg-rose-50 text-rose-600 rounded-xl">
-                        <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                    </div>
+            <!-- Divergências / Ocorrências -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                <div class="flex items-center justify-between text-slate-500 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider text-rose-600">Ocorrências</span>
+                    <i class="fa-solid fa-triangle-exclamation text-rose-500"></i>
                 </div>
-                <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-                    <span id="kpi-ocorrencias-pct" class="font-bold text-rose-600 text-sm">0.0%</span>
-                    <span class="text-slate-400">do total do CD</span>
+                <div>
+                    <h3 id="kpi-ocorrencias" class="text-2xl font-black text-slate-800">0</h3>
+                    <p id="kpi-ocorrencias-pct" class="text-[11px] text-rose-600 font-semibold mt-1">0.0% com divergência</p>
                 </div>
             </div>
-        </div>
 
-        <!-- Seção de Gráficos Principais -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
+            <!-- Acurácia Geral -->
+            <div class="bg-indigo-950 text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between">
+                <div class="flex items-center justify-between text-indigo-300 mb-2">
+                    <span class="text-xs font-bold uppercase tracking-wider">Acurácia Geral</span>
+                    <i class="fa-solid fa-bullseye text-indigo-400"></i>
+                </div>
+                <div>
+                    <h3 id="acuracia-valor" class="text-2xl font-black text-emerald-400">0.0%</h3>
+                    <p class="text-[11px] text-indigo-200 mt-1">Qualidade do inventário</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- SEÇÃO DE GRÁFICOS ANALÍTICOS -->
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Gráfico 1: Progresso da Contagem -->
-            <div class="glass-card rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-pie text-indigo-600"></i>
-                            % Progresso de Contagem
-                        </h3>
-                        <span class="text-xs font-semibold px-2.5 py-1 bg-indigo-50 text-indigo-700 rounded-full">Contagem</span>
-                    </div>
-                    <p class="text-xs text-slate-500 mb-4">Proporção de localizadores contados no CD (SIM) vs pendentes.</p>
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-pie text-emerald-500"></i> Progresso da Contagem
+                    </h3>
+                    <p class="text-xs text-slate-400">Locais Contados vs Pendentes</p>
                 </div>
-                <div class="relative h-64 flex items-center justify-center">
+                <div class="relative flex-1 min-h-[200px] flex items-center justify-center">
                     <canvas id="chartProgresso"></canvas>
                 </div>
-                <div id="progresso-legend" class="mt-4 grid grid-cols-2 gap-2 text-center text-xs pt-3 border-t border-slate-100">
-                    <!-- Preenchido via JS -->
-                </div>
+                <div id="progresso-legend" class="grid grid-cols-2 gap-2 text-center mt-4"></div>
             </div>
 
-            <!-- Gráfico 2: Análise de Ocorrências -->
-            <div class="glass-card rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-doughnut text-rose-600"></i>
-                            % Ocorrências & Acurácia
-                        </h3>
-                        <span class="text-xs font-semibold px-2.5 py-1 bg-rose-50 text-rose-700 rounded-full">Divergências</span>
-                    </div>
-                    <p class="text-xs text-slate-500 mb-4">Localizadores sem divergência vs localizadores com ocorrência registada.</p>
+            <!-- Gráfico 2: Divergências e Ocorrências -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-donut text-rose-500"></i> Análise de Divergências
+                    </h3>
+                    <p class="text-xs text-slate-400">Itens Sem Ocorrência vs Com Divergência</p>
                 </div>
-                <div class="relative h-64 flex items-center justify-center">
+                <div class="relative flex-1 min-h-[200px] flex items-center justify-center">
                     <canvas id="chartOcorrencias"></canvas>
                 </div>
-                <div id="ocorrencia-legend" class="mt-4 grid grid-cols-2 gap-2 text-center text-xs pt-3 border-t border-slate-100">
-                    <!-- Preenchido via JS -->
-                </div>
+                <div id="ocorrencia-legend" class="grid grid-cols-2 gap-2 text-center mt-4"></div>
             </div>
 
-            <!-- Gráfico 3: Matriz Geral de Qualidade -->
-            <div class="glass-card rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-                <div>
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-chart-bar text-emerald-600"></i>
-                            Visão Geral da Operação
-                        </h3>
-                        <span class="text-xs font-semibold px-2.5 py-1 bg-emerald-50 text-emerald-700 rounded-full">Status Geral</span>
-                    </div>
-                    <p class="text-xs text-slate-500 mb-4">Distribuição quantitativa do inventário completo do CD.</p>
+            <!-- Gráfico 3: Visão Geral da Operação -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-chart-column text-indigo-500"></i> Visão Geral Operacional
+                    </h3>
+                    <p class="text-xs text-slate-400">Distribuição completa do inventário</p>
                 </div>
-                <div class="relative h-64">
+                <div class="relative flex-1 min-h-[220px]">
                     <canvas id="chartVisaoGeral"></canvas>
                 </div>
-                <div class="mt-4 text-xs text-slate-500 pt-3 border-t border-slate-100 flex justify-between items-center">
-                    <span>Acurácia nos Contados:</span>
-                    <span id="acuracia-valor" class="font-bold text-emerald-600 text-sm">0%</span>
-                </div>
             </div>
+        </section>
 
-        </div>
-
-        <!-- Tabela Detalhada -->
-        <div class="glass-card rounded-2xl p-6 shadow-sm">
-            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+        <!-- SEÇÃO DE TABELA DE DADOS -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-table-list text-indigo-600"></i>
-                        Detalhamento de Localizadores
+                    <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-indigo-600"></i> Detalhamento por Localizador
                     </h3>
-                    <p class="text-xs text-slate-500">Listagem de registros identificados na planilha</p>
+                    <p id="table-count-info" class="text-xs text-slate-400">Exibindo 0 localizadores</p>
                 </div>
 
                 <!-- Filtros e Busca -->
                 <div class="flex flex-wrap items-center gap-3">
-                    <div class="relative min-w-[220px]">
+                    <div class="relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="table-search" placeholder="Buscar localizador..." class="w-full pl-9 pr-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        <input type="text" id="table-search" placeholder="Buscar localizador..." class="pl-8 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500 w-full sm:w-48">
                     </div>
 
-                    <select id="table-filter" class="py-2 px-3 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none font-medium text-slate-700">
-                        <option value="todos">Todos os Registros</option>
-                        <option value="contados">Apenas Contados (SIM)</option>
-                        <option value="pendentes">Apenas Pendentes (NÃO)</option>
-                        <option value="ocorrencias">Apenas Com Ocorrência</option>
-                        <option value="sem_ocorrencia">Contados Sem Ocorrência</option>
+                    <select id="table-filter" class="px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <option value="todos">Todos os registros</option>
+                        <option value="contados">Somente Contados (SIM)</option>
+                        <option value="pendentes">Somente Pendentes (NÃO)</option>
+                        <option value="ocorrencias">Somente Com Ocorrência</option>
+                        <option value="sem_ocorrencia">Somente OK (Sem Ocorrência)</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Tabela -->
-            <div class="overflow-x-auto rounded-xl border border-slate-200 max-h-96 custom-scrollbar">
-                <table class="w-full text-left text-xs text-slate-700">
-                    <thead class="bg-slate-100 text-slate-600 uppercase font-semibold sticky top-0 z-10">
-                        <tr>
+            <!-- Tabela Responsiva -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse text-xs">
+                    <thead>
+                        <tr class="bg-slate-50 text-slate-500 uppercase font-bold border-b border-slate-100">
                             <th class="py-3 px-4">#</th>
                             <th class="py-3 px-4">Localizador</th>
-                            <th class="py-3 px-4 text-center">Status Contagem</th>
-                            <th class="py-3 px-4 text-center">Ocorrência / Divergência</th>
+                            <th class="py-3 px-4 text-center">Contagem</th>
+                            <th class="py-3 px-4 text-center">Status / Ocorrência</th>
                         </tr>
                     </thead>
-                    <tbody id="table-body" class="divide-y divide-slate-200 bg-white">
-                        <!-- Conteúdo gerado dinamicamente via JS -->
+                    <tbody id="table-body" class="divide-y divide-slate-100">
+                        <tr>
+                            <td colspan="4" class="text-center py-8 text-slate-400">
+                                <i class="fa-solid fa-inbox text-3xl mb-2 block"></i>
+                                Nenhum dado carregado. Importe uma planilha ou selecione os dados demonstrativos.
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
-
-            <div class="mt-4 flex flex-wrap items-center justify-between text-xs text-slate-500">
-                <span id="table-count-info">Exibindo 0 registros</span>
-                <span class="text-slate-400">Role para ver mais localizadores</span>
-            </div>
-        </div>
+        </section>
 
     </main>
 
-    <!-- Rodapé -->
-    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
-        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-            <p><strong>Dashboard CD</strong> — Análise automática com banco de dados em tempo real.</p>
-            <p class="text-slate-400">Total de registros = 100% da base do CD</p>
-        </div>
-    </footer>
-
-    <!-- Script Principal Externo Original -->
+    <!-- SCRIPT DA APLICAÇÃO -->
     <script src="script.js"></script>
-
-    <!-- SDKs do FIREBASE (Módulos de Compatibilidade Web) -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <!-- INTEGRAÇÃO COMPLETA FIREBASE -->
     <script>
-        // 1. Suas chaves copiadas do Console Firebase
+        // 1. Configuração do seu Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyAyZKCQk1fBWM8keHk_bcZv4VI3Rg_kgRQ",
             authDomain: "gestao-de-estoque-7bd06.firebaseapp.com",
@@ -316,7 +251,7 @@
             appId: "1:583155579792:web:aa6de8bccb2c649f15d115"
         };
 
-        // Inicializa o Firebase e o Firestore
+        // Inicializa o Firebase e Firestore
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
@@ -352,11 +287,6 @@
                     dados: []
                 });
 
-                // Se houver a função de processar/renderizar na tela, executa enviando array vazio
-                if (typeof window.processarDadosExcel === 'function') {
-                    window.processarDadosExcel([]);
-                }
-
                 alert("Todos os dados e gráficos foram zerados com sucesso!");
             } catch (error) {
                 console.error("Erro ao zerar os dados:", error);
@@ -364,7 +294,7 @@
             }
         }
 
-        // 4. LISTEN EM TEMPO REAL (Carrega automático para todos os usuários)
+        // 4. LISTEN EM TEMPO REAL (Sincroniza tudo sem precisar de F5)
         db.collection("inventario").doc("atual").onSnapshot((doc) => {
             if (doc.exists) {
                 const info = doc.data();
@@ -383,7 +313,7 @@
             }
         });
 
-        // 5. LOGOUT E CONTROLE DE PERMISSÕES
+        // 5. LOGOUT E CONTROLE DE PERMISSÕES POR NÍVEL
         function fazerLogout() {
             localStorage.clear();
             window.location.replace('login.html');
